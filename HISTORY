@@ -1,3 +1,21 @@
+* v3.21 - April 21, 1998
+
+Balanced quotes and regex delimiters are now handled correctly within queries.
+
+Also fixed the following bugs:
+
+    * Equal signs in queries caused field values to be modified
+    * Regex metacharacters in 'write' delimiter were not being escaped
+    * One field inserts failed
+    * Mixed case SQL was ignored
+    * Failed to escape "\" when writing to a file
+    * One field records with a value of 0 were accidently ignored
+    * Values with \"" were incorrectly converted to \\"
+    * Unmatched quotes caused fatal errors
+
+As of this version, you have better control over the error messages that
+Sprite spits out. See the example for more details.
+
 * v3.2 - March 12, 1998
 
 TWO VERY IMPORTANT CHANGES:

@@ -1,7 +1,7 @@
 use ExtUtils::MakeMaker;
 require 5.002;
 
-$VERSION = '3.2';
+$VERSION = '3.21';
 
 print "\nWelcome to the installation of Sprite $VERSION...\n\n";
 

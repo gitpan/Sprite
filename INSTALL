@@ -5,11 +5,11 @@
 If you have access to the Perl library, then you can go ahead and
 install Sprite in the same way as you would any other module:
 
-	% mv Sprite-3.2.tar.gz /some/directory
+	% mv Sprite-3.21.tar.gz /some/directory
 	% cd /some/directory
-	% gzip -d Sprite-3.2.tar.gz
-	% tar -xvf Sprite-3.2.tar
-	% cd Sprite-3.2
+	% gzip -d Sprite-3.21.tar.gz
+	% tar -xvf Sprite-3.21.tar
+	% cd Sprite-3.21
         % perl Makefile.PL
 	% make
 	% make install

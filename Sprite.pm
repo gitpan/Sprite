@@ -1,8 +1,8 @@
 #!/usr/local/bin/perl5
 
 ##++
-##    Sprite v3.2
-##    Last modified: March 12, 1998
+##    Sprite v3.21
+##    Last modified: April 21, 1998
 ##
 ##    Copyright (c) 1995-98, Shishir Gundavaram
 ##    All Rights Reserved
@@ -333,7 +333,7 @@ use Fcntl;
 ##  use vars qw ($VERSION $LOCK_SH $LOCK_EX);
 ##--
 
-$Sprite::VERSION = '3.2';
+$Sprite::VERSION = '3.21';
 $Sprite::LOCK_SH = 1;
 $Sprite::LOCK_EX = 2;
 
@@ -397,7 +397,7 @@ sub set_delimiter
     $delimiter ||= $self->{_read} || $self->{_write};
 
     $type =~ s/^-//;
-    $type =~ tr/A-Z/a-z/;
+    $type = lc $type;
 
     if ($type eq 'read') {
 	$self->{_read} = $delimiter;
@@ -532,15 +532,14 @@ sub sql
     my ($self, $query) = @_;
     my ($command, $status);
 
-    return (-514) unless ($query);
+    $self->display_error (-514) unless ($query);
 
     $query   =~ s/\n/ /gs;
     $query   =~ s/^\s*(.*?)\s*$/$1/;
     $command = '';
 
     if ($query =~ /^($self->{commands})/io) {
-	$command = $1;
-
+	$command = lc $1;
 	$status  = $self->$command ($query);
 
 	if (ref ($status) eq 'ARRAY') {
@@ -562,20 +561,16 @@ sub sql
 
 sub display_error
 {	
-    my ($self, $error) = @_;
+    my ($self, $status, @error) = @_;
+    my ($error, $other);
 
-    $other = $@ || $! || 'None';
+    $error = (scalar @error) ? "\n>> " . join ("\n>> ", @error) : '';
+    $other = ($@) ? "\n>> $@" : "\n";
 
-    print STDERR <<Error_Message;
+    warn <<Error_Message;
+Sprite Error:
 
-Oops! Sprite encountered the following error when processing your request:
-
-    $self->{errors}->{$error}
-
-Here's some more information to help you:
-
-    $other
-
+>> $self->{errors}->{$status} $error $other
 Error_Message
 	
     return (1);
@@ -617,17 +612,17 @@ sub define_errors
 
     $errors->{'-501'} = 'Could not open specified database.';
     $errors->{'-502'} = 'Specified column(s) not found.';
-    $errors->{'-503'} = 'Incorrect format in [select] statement.';
-    $errors->{'-504'} = 'Incorrect format in [update] statement.';
-    $errors->{'-505'} = 'Incorrect format in [delete] statement.';
-    $errors->{'-506'} = 'Incorrect format in [add/drop column] statement.';
-    $errors->{'-507'} = 'Incorrect format in [alter table] statement.';
-    $errors->{'-508'} = 'Incorrect format in [insert] command.';
+    $errors->{'-503'} = 'Incorrect format in select.';
+    $errors->{'-504'} = 'Incorrect format in update.';
+    $errors->{'-505'} = 'Incorrect format in delete.';
+    $errors->{'-506'} = 'Incorrect format in add/drop column.';
+    $errors->{'-507'} = 'Incorrect format in alter table.';
+    $errors->{'-508'} = 'Incorrect format in insert command.';
     $errors->{'-509'} = 'The no. of columns does not match no. of values.';
     $errors->{'-510'} = 'A severe error! Check your query carefully.';
     $errors->{'-511'} = 'Cannot write the database to output file.';
     $errors->{'-512'} = 'Unmatched quote in expression.';
-    $errors->{'-513'} = 'Need to open the database first!';
+    $errors->{'-513'} = 'Need to open the database first.';
     $errors->{'-514'} = 'Please specify a valid query.';
     $errors->{'-515'} = 'Cannot get lock on database file.';
     $errors->{'-516'} = 'Cannot delete temp. lock file.';
@@ -649,8 +644,8 @@ sub parse_expression
 
     %numopmap  = ( '=' => 'eq', '==' => 'eq', '>=' => 'ge', '<=' => 'le',
                    '>' => 'gt', '<'  => 'lt', '!=' => 'ne', '<>' => 'ne' );
-    %stropmap  = ( 'eq' => '==', 'ge' => '>=', 'le' => '<=', 'gt' => '>',
-	           'lt' => '<',  'ne' => '!=' );
+    %stropmap  = ( 'eq' => '==', 'ge' => '>=', 'le' => '<=', 
+	           'gt' => '>',  'lt' => '<',  'ne' => '!=');
 
     $numops    = join '|', keys %numopmap;
     $strops    = join '|', keys %stropmap;
@@ -658,22 +653,21 @@ sub parse_expression
     $special   = "$strops|and|or";
 
     ##++
-    ##  The expression: "([^"\\]*(\\.[^"\\]*)*)" was provided by
-    ##  Jeffrey Friedl. Thanks Jeffrey!
+    ##  A big thanks to the King of Regex, Jeffrey Friedl, for helping
+    ##  me craft up this beauty: (...)((?:\\\1|(?!\1).)*)\1 - Thanks!
     ##--
 
-    $query =~ s/([!=]~)\s*(m)?([^\w;\s])([^\3\\]*(?:\\.[^\3\\]*)*)\3(i)?/
-	           my ($m, $i) = ($2, $5);
-                   $m ||= ''; $i ||= '';
+    $query =~ s{([!=]~)\s*(m?)([^\w;\s])((?:\\\3|(?!\3).)*)\3(i?)}{
+                   push (@strings, "$2$3$4$3$5"); "$1 *$#strings";
+               }ge;
 
-                   push (@strings, "$m$3$4$3$i"); "$1 *$#strings";
-               /ge;
-
-    $query =~ s|(['"])([^\1\\]*(?:\\.[^\1\\]*)*)\1|
+    $query =~ s{(['"])((?:\\\1|(?!\1).)*)\1}{
                    push (@strings, "$1$2$1"); "*$#strings";
- 	       |ge;
+ 	       }ge;
 
     $query =~ s|\b($column)\s*($numops)\s*\*|$1 $numopmap{$2} \*|go;
+
+    $query =~ s|\b($column)\s*=\s*(\d+)|$1 == $2|go;
 
     $query =~ s|\b($column)\s+($strops)\s+(\d+)|$1 $stropmap{$2} $3|go;
 
@@ -984,7 +978,7 @@ sub insert_data
     @columns = split (/,/, $column_string);
     @values  = $self->quotewords (',\s*', $value_string);
 
-    if ($#columns = $#values) {
+    if ($#columns == $#values) {
 	$hash = {};
 
 	for ($loop=0; $loop <= $#columns; $loop++) {
@@ -1006,12 +1000,12 @@ sub insert_data
 sub write_file
 {
     my ($self, $new_file) = @_;
-    my ($status, $loop, $record, $column, $value, $fields, $record_string);
+    my ($status, $write, $fields, $loop, $record, $record_string, 
+	$column, $value);
 
     local (*FILE, $^W);
 
-    $^W = 0;
-
+    $^W     = 0;
     $status = (scalar @{ $self->{records} }) ? 1 : -513;
 
     if ( ($status >= 1) && (open (FILE, ">$new_file")) ) {
@@ -1021,7 +1015,8 @@ sub write_file
 	    $self->lock || $self->display_error (-515);
 	}
 
-	$fields = join ($self->{_write}, @{ $self->{order} });
+	$write  = $self->{_write}; 
+	$fields = join ($write, @{ $self->{order} });
 
 	print FILE "$fields\n";
 
@@ -1035,15 +1030,15 @@ sub write_file
  	    foreach $column (@{ $self->{order} }) {
 		$value = $record->{$column};
 
-                if ($value =~ /(?:$self->{_write}|['"])/o) {
-		    $value =~ s/"/\\"/g;
+                if ($value =~ /(?:\Q$write\E)|(?:['"\\])/o) {
+		    $value =~ s/(["\\])/\\$1/g;
 		    $value =  qq|"$value"|;
 		}
 			
-                $record_string .= "$self->{_write}$value";
+                $record_string .= "$write$value";
 	    }
 
-	    $record_string =~ s/^$self->{_write}//o;
+	    $record_string =~ s/^\Q$write\E//o;
 
 	    print FILE "$record_string\n";
 	}
@@ -1089,15 +1084,16 @@ sub load_database
 
     while (<FILE>) {
 	chomp;
-	next unless ($_);
-
-	s/""/\\"/g;
 
 	if (/['"\\]/) {
+	    s/((?!\\).)""/$1\\"/g;
+
             @record = $self->quotewords ($self->{_read}, $_);
         } else {
             @record = split (/$self->{_read}/o, $_);
         }
+
+        next unless (scalar @record);
 
 	$hash = {};
 
@@ -1137,9 +1133,9 @@ sub quotewords
 		$snippet = $1;
 	    } elsif (s/^'([^'\\]*(?:\\.[^'\\]*)*)'//) {
 		$snippet = $1;
-	    } elsif (/^["']/) {
-		$self->display_error (-512);
-		die;
+	    } elsif (/^["']/) {              # Don't bail out!
+                $self->display_error (-512, $line);
+                return;
 	    } elsif (s/^\\(.)//) {
                 $snippet = $1;
             } elsif (!length || s/^$delim//) {
