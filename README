@@ -1,0 +1,37 @@
+
+                    Sprite v3.1 Installation
+                    ------------------------
+
+If you have access to the Perl library, then you can go ahead and
+install Sprite in the same way as you would any other module:
+
+	% mv Sprite-3.1.tar.gz /usr/local/perl5.002/ext
+	% cd /usr/local/perl5.002/ext
+	% gzip -d Sprite-3.1.tar.gz
+	% tar -xvf Sprite-3.1.tar
+	% cd Sprite-3.1
+        % perl Makefile.PL
+	% make
+	% make install
+
+Remember, you need Perl v5.002 or above for Sprite to work correctly!
+
+If you _dont_ have access to the Perl library, then you can simply
+copy the file Sprite.pm from the distribution to any directory
+you choose and then add the following to the top of your script
+(assuming you copied to /home/shishir/lib):
+
+	#!/usr/local/bin/perl5.002
+
+	BEGIN
+	{
+	    unshift (@INC, "/home/shishir/lib");
+	}
+
+	use Sprite;
+
+That's it! I included one simple example with this distribution. If
+you want more examples, check out Examples.tar.gz located at:
+
+	ftp://ftp.ora.com/pub/examples/nutshell/cgi
+ 

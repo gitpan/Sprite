@@ -1,0 +1,8 @@
+MANIFEST                        This File
+CHANGES                         Revision History
+README                          Make sure you read this file
+Sprite.pm                       Database Module
+Sprite.doc		        Database Documentation
+Makefile.PL                     Makefile Generator
+examples/select.pl              Simple example that retrieves data
+examples/test.db                Simple database
